@@ -1,0 +1,166 @@
+
+
+def sougou_down(url):
+
+    headers={
+        "Host":"www.sogou.com",
+        "Cookie":"ABTEST=8|1576115072|v17; IPLOC=CN1100; SUID=F2F5CD6F5F20940A000000005DF19B80; SUV=1576115072999899; browerV=3; osV=2; SNUID=D9D9E1432C2EB55CC8197C8B2C457A27; CXID=7396C4821C93351D4D88595C2B493192; ad=yfxeSZllll2NDZUolllllVT8jJwlllllbDTCDkllllGlllllRvoll5@@@@@@@@@@; taspeed=taspeedexist; pgv_pvi=2560957440; pgv_si=s1135836160; sct=18; ld=$lllllllll2NDZSmlllllVT8YJDlllllbDTCDkllll6lllllRylll5@@@@@@@@@@; sst0=897",
+        "User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.108 Safari/537.36"
+    }
+    proxy2 = {
+        "https": "https://{}".format(ip_number),
+    }
+    html = requests.get(url, headers=headers, proxies=proxy2, timeout=10)
+    html.encoding="utf-8"
+    # print(html.text)
+    return  etree.HTML(html.text)
+
+def sougou_down2(url):
+
+    headers={
+    "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.80 Safari/537.36"
+    }
+    html=requests.get(url,headers=headers)
+    html.encoding="gb2312"
+    # print(html.text)
+    return  html.text
+
+
+def down_detail(key_word,keyword_id):
+    # key_word = key_word.split("+")[0]
+    # keyword_id = int(key_word.split("+")[1])
+    # =======搜狗===========
+    try:
+        for j in range(10):
+            print("第%d页" % (j + 1))
+            url1 = "https://www.sogou.com/web?query={}&page={}".format(key_word,
+                                                                       j + 1)
+            nowTime = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            # url1="https://www.baidu.com/s?ie=utf-8&f=8&wd={}&si=xiaohongshu.com&ct=2097152&gpc=stf%3D1547368671%2C1547455071%7Cstftype%3D1"
+            html1 = sougou_down(url1)
+            for i in range(len(html1.xpath('//div[@class="results"]/div'))):
+                print(i + 1)
+                # and html1.xpath('//div[@class="results"]/div[{}]/div[1]/@class'.format(i + 1))[0] == "strBox"
+                try:
+                    if html1.xpath('//div[@class="results"]/div[{}]/h3'.format(i + 1)):
+                        if html1.xpath('//div[@class="results"]/div[{}]/@class'.format(i + 1))[
+                            0] != "rb" and "weixin.sogou.com" not in \
+                                html1.xpath('//div[@class="results"]/div[{}]/h3/a/@href'.format(i + 1))[
+                                    0] and "相关内容_知乎" not in \
+                                html1.xpath('//div[@class="results"]/div[{}]//h3'.format(i + 1))[0].xpath('string(.)'):
+                            titile1 = html1.xpath('//div[@class="results"]/div[{}]/h3'.format(i + 1))[0]
+                            title = "[{}]".format(key_word) + " " + titile1.xpath('string(.)')
+                            content1 = html1.xpath('//div[@class="results"]/div[{}]/div'.format(i + 1))[0]
+                            # print(content1)
+                            content = content1.xpath('string(.)')
+                            link1 = "https://www.sogou.com" + \
+                                    html1.xpath('//div[@class="results"]/div[{}]//h3/a/@href'.format(i + 1))[0]
+                            detil_url = \
+                                re.findall('replace\("(.*?)"\)', requests.get(url=link1, allow_redirects=False).text,
+                                           re.S)[0]
+                            kuaizao_url = \
+                                html1.xpath('//div[@class="results"]/div[{}]//div[@class="fb"]/a/@href'.format(i + 1))[
+                                    0]
+                            kuaizao_html = sougou_down2(kuaizao_url)
+                            print("sougou", title, content, detil_url, kuaizao_url)
+                            blacklist_nums = 0
+                            for blacklist_word in blacklist_words:
+                                if blacklist_word not in title:
+                                    blacklist_nums += 1
+                            black_urls_nums = 0
+                            for black_url in black_urls:
+                                if black_url not in detil_url:
+                                    black_urls_nums += 1
+                            if blacklist_nums == len(blacklist_words) and black_urls_nums == len(black_urls):
+                                url_judge = set_redis(detil_url)
+                                if url_judge == False:
+                                    # mysql save
+                                    hot = "insert into
+                                    save_mysql(hot)
+                                else:
+                                    print("重复数据")
+                                    pass
+                        elif html1.xpath('//div[@class="results"]/div[{}]/@class'.format(i + 1))[
+                            0] != "rb" and "weixin.sogou.com" in \
+                                html1.xpath('//div[@class="results"]/div[{}]/h3/a/@href'.format(i + 1))[0]:
+                            pass
+                        # elif html1.xpath('//div[@class="results"]/div[{}]/@class'.format(i + 1))[0] != "rb" and  html1.xpath('//div[@class="results"]/div[{}]/div/@class'.format(i + 1))[0] =="vrTitle":
+                        #     pass
+                        elif html1.xpath('//div[@class="results"]/div[{}]/@class'.format(i + 1))[
+                            0] != "rb" and "相关内容_知乎" in \
+                                html1.xpath('//div[@class="results"]/div[{}]//h3'.format(i + 1))[0].xpath('string(.)'):
+                            pass
+                        else:
+                            titile1 = html1.xpath('//div[@class="results"]/div[{}]//h3'.format(i + 1))[0]
+                            title = "[{}]".format(key_word) + " " + titile1.xpath('string(.)')
+                            content1 = html1.xpath('//div[@class="results"]/div[{}]//div'.format(i + 1))[0]
+                            # print(content1)
+                            content = content1.xpath('string(.)')
+                            link1 = "https://www.sogou.com" + \
+                                    html1.xpath('//div[@class="results"]/div[{}]//h3/a/@href'.format(i + 1))[0]
+                            detil_url = \
+                                re.findall('replace\("(.*?)"\)', requests.get(url=link1, allow_redirects=False).text,
+                                           re.S)[
+                                    0]
+                            kuaizao_url = \
+                                html1.xpath('//div[@class="results"]/div[{}]//div[@class="fb"]/a/@href'.format(i + 1))[
+                                    0]
+                            kuaizao_html = sougou_down2(kuaizao_url)
+                            print("sougou", title, content, detil_url, kuaizao_url)
+
+                            blacklist_nums = 0
+                            for blacklist_word in blacklist_words:
+                                if blacklist_word not in title:
+                                    blacklist_nums += 1
+                            black_urls_nums = 0
+                            for black_url in black_urls:
+                                if black_url not in detil_url:
+                                    black_urls_nums += 1
+                            if blacklist_nums == len(blacklist_words) and black_urls_nums == len(black_urls):
+                                url_judge = set_redis(detil_url)
+                                if url_judge == False:
+                                    # mysql save
+                                    hot = 
+                                    save_mysql(hot)
+                                else:
+                                    print("重复数据")
+                                    pass
+                    if "aggrBox" in html1.xpath('//div[@class="results"]/div[{}]/@id'.format(i + 1))[0]:
+                        titile1 = html1.xpath('//div[@class="results"]/div[{}]//h3'.format(i + 1))[0]
+                        title = "[{}]".format(key_word) + " " + titile1.xpath('string(.)')
+                        content1 = html1.xpath('//div[@class="results"]/div[{}]//div'.format(i + 1))[0]
+                        # print(content1)
+                        content = content1.xpath('string(.)')
+                        link1 = "https://www.sogou.com" + \
+                                html1.xpath('//div[@class="results"]/div[{}]//h3/a/@href'.format(i + 1))[0]
+                        detil_url = link1
+                        kuaizao_url = ""
+                        print("sougou", title, content, detil_url, kuaizao_url)
+                        blacklist_nums = 0
+                        for blacklist_word in blacklist_words:
+                            if blacklist_word not in title:
+                                blacklist_nums += 1
+                        black_urls_nums = 0
+                        for black_url in black_urls:
+                            if black_url not in detil_url:
+                                black_urls_nums += 1
+                        if blacklist_nums == len(blacklist_words) and black_urls_nums == len(black_urls):
+                            url_judge = set_redis(detil_url)
+                            if url_judge == False:
+                                # mysql save
+                                hot = "insert into h
+                                save_mysql(hot)
+                            else:
+                                print("重复数据")
+                                pass
+
+                except Exception as e:
+                    print(e, "&&&&&")
+
+                    pass
+
+
+    except Exception as e:
+        print(e, "&&&&&")
+        pass
+
